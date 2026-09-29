@@ -4,14 +4,6 @@ import { Belanja, Stok, MASTER_STOK, ScanItem } from "@/lib/storage";
 
 type ScanResult = { toko: string; tanggal: string; items: ScanItem[]; total: number };
 
-function cocokkanMaster(namaScan: string): string | null {
-  const namaLower = namaScan.toLowerCase();
-  for (const m of MASTER_STOK) {
-    if (namaLower.includes(m.toLowerCase())) return m;
-  }
-  return null;
-}
-
 export default function TabBelanja({
   data,
   stok,
@@ -38,6 +30,15 @@ export default function TabBelanja({
   const [editForm, setEditForm] = useState({ item: "", brand: "", qty: "", satuan: "" });
   const [filterToko, setFilterToko] = useState("");
   const [search, setSearch] = useState("");
+  const [showManual, setShowManual] = useState(false);
+  const [manualForm, setManualForm] = useState({
+    tanggal: new Date().toISOString().slice(0, 10),
+    toko: "",
+    item: "",
+    brand: "",
+    qty: "",
+    satuan: "kg",
+  });
   const inputRef = useRef<HTMLInputElement>(null);
 
   function pilihFile(f: File) {
@@ -79,13 +80,41 @@ export default function TabBelanja({
       setFile(null);
       setPreview(null);
       if (inputRef.current) inputRef.current.value = "";
-      setToast(`${r.items.length} item berhasil discan. Klik "Masukin ke Stok" untuk bahan yang mau ditambahkan.`);
+      setToast(`${r.items.length} item berhasil discan.`);
       setTimeout(() => setToast(null), 5000);
     } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
+  }
+
+  function submitManual() {
+    if (!manualForm.toko || !manualForm.item || !manualForm.qty) return;
+    const baseId = data.length > 0 ? Math.max(...data.map((d) => d.id)) + 1 : 1;
+    const item: Belanja = {
+      id: baseId,
+      tanggal: manualForm.tanggal,
+      toko: manualForm.toko,
+      item: manualForm.item,
+      brand: manualForm.brand,
+      qty: Number(manualForm.qty),
+      satuan: manualForm.satuan,
+      total: 0,
+      sudahMasukStok: false,
+    };
+    onTambah([item]);
+    setManualForm({
+      tanggal: new Date().toISOString().slice(0, 10),
+      toko: "",
+      item: "",
+      brand: "",
+      qty: "",
+      satuan: "kg",
+    });
+    setShowManual(false);
+    setToast("Item manual berhasil ditambahkan.");
+    setTimeout(() => setToast(null), 3000);
   }
 
   function mulaiEdit(b: Belanja) {
@@ -130,7 +159,7 @@ export default function TabBelanja({
   return (
     <div>
       <div className="p-5 border-b border-slate-200 bg-slate-50">
-        <h3 className="font-semibold text-slate-800 mb-3 text-sm">Scan Struk Belanja</h3>
+        <h3 className="font-semibold text-slate-800 mb-3 text-sm">Input Belanja</h3>
 
         {toast && (
           <div className="mb-3 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-sm text-emerald-800 font-medium">
@@ -138,7 +167,7 @@ export default function TabBelanja({
           </div>
         )}
 
-        <div className="flex flex-col md:flex-row gap-3 items-stretch">
+        <div className="flex flex-col md:flex-row gap-3 items-stretch mb-3">
           <input
             ref={inputRef}
             type="file"
@@ -166,11 +195,85 @@ export default function TabBelanja({
           >
             {loading ? "Scanning..." : "Scan Sekarang"}
           </button>
+          <button
+            onClick={() => setShowManual(!showManual)}
+            className="bg-slate-700 text-white font-semibold px-6 py-3 rounded-lg hover:bg-slate-800 whitespace-nowrap"
+          >
+            {showManual ? "Tutup" : "+ Input Manual"}
+          </button>
         </div>
 
         {error && (
-          <div className="mt-3 p-2.5 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+          <div className="mb-3 p-2.5 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
             {error}
+          </div>
+        )}
+
+        {showManual && (
+          <div className="mt-3 p-4 rounded-lg border border-slate-300 bg-white">
+            <h4 className="font-semibold text-slate-700 mb-3 text-sm">Input Manual</h4>
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+              <input
+                type="date"
+                value={manualForm.tanggal}
+                onChange={(e) => setManualForm({ ...manualForm, tanggal: e.target.value })}
+                className="px-3 py-2 rounded border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+              <input
+                type="text"
+                placeholder="Toko"
+                value={manualForm.toko}
+                onChange={(e) => setManualForm({ ...manualForm, toko: e.target.value })}
+                className="px-3 py-2 rounded border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+              <input
+                type="text"
+                placeholder="Item"
+                value={manualForm.item}
+                onChange={(e) => setManualForm({ ...manualForm, item: e.target.value })}
+                className="px-3 py-2 rounded border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+              <input
+                type="text"
+                placeholder="Brand (opsional)"
+                value={manualForm.brand}
+                onChange={(e) => setManualForm({ ...manualForm, brand: e.target.value })}
+                className="px-3 py-2 rounded border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+              <input
+                type="number"
+                placeholder="Qty"
+                value={manualForm.qty}
+                onChange={(e) => setManualForm({ ...manualForm, qty: e.target.value })}
+                className="px-3 py-2 rounded border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+              <select
+                value={manualForm.satuan}
+                onChange={(e) => setManualForm({ ...manualForm, satuan: e.target.value })}
+                className="px-3 py-2 rounded border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+              >
+                <option value="kg">kg</option>
+                <option value="g">g</option>
+                <option value="liter">liter</option>
+                <option value="ml">ml</option>
+                <option value="pcs">pcs</option>
+              </select>
+            </div>
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                onClick={() => setShowManual(false)}
+                className="px-4 py-2 rounded bg-slate-100 text-slate-700 text-sm hover:bg-slate-200"
+              >
+                Batal
+              </button>
+              <button
+                onClick={submitManual}
+                disabled={!manualForm.toko || !manualForm.item || !manualForm.qty}
+                className="px-4 py-2 rounded bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 disabled:opacity-50"
+              >
+                Simpan
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -209,7 +312,7 @@ export default function TabBelanja({
         {data.length === 0 ? (
           <div className="p-12 text-center text-slate-400">
             <div className="text-5xl mb-3">🧾</div>
-            <div className="text-sm">Belum ada data belanja. Scan struk untuk mulai.</div>
+            <div className="text-sm">Belum ada data belanja.</div>
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-12 text-center text-slate-400">
