@@ -38,7 +38,7 @@ Aturan:
 - Jangan tambahkan penjelasan apapun di luar JSON.`;
 
     const interaction = await ai.interactions.create({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.8-flash",
       input: [
         { type: "text", text: prompt },
         { type: "image", data: base64, mime_type: file.type },
@@ -54,4 +54,6 @@ Aturan:
     return NextResponse.json({ error: err.message || "Gagal scan" }, { status: 500 });
   }
 }
+
+
 
