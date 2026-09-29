@@ -134,7 +134,8 @@ export const db = {
     save: (d: Produk[]) => set(KEYS.produk, d),
     resetDefault: () => {
       set(KEYS.produk, SEED_PRODUK);
-      localStorage.setItem(KEYS.produk_initialized, "1");
+      localStorage.setItem(KEYS.produkInitialized, "1");
     },
   },
 };
+
